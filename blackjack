@@ -1,0 +1,134 @@
+#!/usr/bin/perl
+
+# Require Perl 5.16 or later.
+use v5.16;
+
+# Enable warnings.
+use strict;
+use warnings;
+
+# Use UTF-8 for all I/O by default.
+use open qw[:std :utf8];
+
+# Initialize modules.
+use List::Util qw[sum];
+
+# Declare prototypes.
+sub make_deck ();
+sub shuffle (\@);
+sub ask_hit ();
+sub total(@);
+sub show_hands (\@\@\@;$);
+
+# Global variables.
+my @suits = ("\x{2660}", "\x{2663}", "\x{2665}", "\x{2666}");
+my @ranks = qw[A 2 3 4 5 6 7 8 9 10 J Q K];
+my %value = map { $ranks[$_] => ($_ < 10 ? $_ + 1 : 10); } 0 .. $#ranks;
+
+# Shuffle the deck of cards.
+sub shuffle (\@) {
+   my ($deck) = @_;
+
+   for (my $i = $#{$deck}; $i > 0; $i--) {
+      my $j = int rand($i + 1);
+      ($deck->[$i], $deck->[$j]) = ($deck->[$j], $deck->[$i]);
+   }
+}
+
+# Ask the user whether to hit or not.
+sub ask_hit () {
+   local $_ = "";
+
+   until (/^[yn]/i) {
+      print "Hit? ";
+      $_ = <STDIN>;
+      chomp;
+   }
+
+   return /^y/i;
+}
+
+# Calculate the total value of a hand.
+sub total(@) {
+   my (@cards) = @_;
+
+   chop for @cards;
+
+   my $total = sum(@value{@cards});
+
+   $total += 10 if $total < 12 and grep { $_ eq "A"; } @cards;
+
+   return $total;
+}
+
+# Show the player and dealer hands.
+sub show_hands (\@\@\@;$) {
+   my ($player, $dealer, $deck, $hide) = @_;
+
+   my @dealer = @{$dealer};
+
+   shift @dealer if $hide;
+
+   printf "\nPlayer: @{$player} (%d)\n", total(@{$player});
+   printf "Dealer: %s@dealer (%d)\n", ($hide ? "?? " : ""), total(@dealer);
+}
+
+say "Welcome to Blackjack";
+
+my @deck = map { my $suit = $_; map { "$_$suit"; } @ranks } @suits;
+
+shuffle @deck;
+
+my $wins = 0;
+my $losses = 0;
+
+while (@deck >= 26) {
+   printf "\n(%d cards left)\n", scalar @deck;
+
+   my (@player, @dealer);
+
+   for (1..2) {
+      push @player, shift @deck;
+      push @dealer, shift @deck;
+   }
+
+   show_hands @player, @dealer, @deck, 1;
+
+   while (total(@player) < 21 and ask_hit) {
+      push @player, shift @deck;
+      show_hands @player, @dealer, @deck, 1;
+   }
+
+   if (total(@player) > 21) {
+      say "Player busts!";
+      $losses++;
+   } else {
+      say "";
+      show_hands @player, @dealer, @deck;
+
+      while (total(@dealer) < 17) {
+         say "Dealer hits!";
+         push @dealer, shift @deck;
+         show_hands @player, @dealer, @deck;
+      }
+
+      if (total(@dealer) > 21) {
+         say "Dealer busts!\nPlayer wins!";
+         $wins++;
+      } else {
+         say "Dealer stands.";
+
+         if (total(@player) > total(@dealer)) {
+            say "Player wins!";
+            $wins++;
+         } else {
+            say "Player loses!";
+            $losses++;
+         }
+      }
+   }
+
+   say "Wins: $wins\nLosses: $losses";
+}
+
+say "\nEnd Game";
