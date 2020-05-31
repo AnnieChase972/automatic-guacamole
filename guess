@@ -1,0 +1,35 @@
+#!/usr/bin/perl
+
+use v5.16;
+
+my $low = 0;
+my $high = 50;
+
+my $answer = int rand($high - $low + 1);
+
+my $guesses = 1;
+
+while ($guesses <= 7) {
+   print "Enter a guess between $low and $high: ";
+
+   my $guess = <STDIN>;
+
+   chomp $guess;
+
+   if ($guess > $high) {
+      say "too high";
+   } elsif ($guess < $low) {
+      say "too low";
+   } elsif ($guess < $answer) {
+      say "higher";
+      $low = $guess + 1;
+   } elsif ($guess > $answer) {
+      say "lower";
+      $high = $guess - 1;
+   } else {
+      say "GREAT JOB";
+      exit 0;
+   }
+}
+
+say "YOU SUCK AT THIS";
